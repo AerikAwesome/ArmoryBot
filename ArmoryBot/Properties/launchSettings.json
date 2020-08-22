@@ -1,0 +1,10 @@
+{
+  "profiles": {
+    "ArmoryBot": {
+      "commandName": "Project"
+    },
+    "Docker": {
+      "commandName": "Docker"
+    }
+  }
+}
