@@ -33,6 +33,7 @@ namespace ArmoryBot
             {
                 builder.AddUserSecrets<Program>();
             }
+            builder.AddEnvironmentVariables();
 
             return builder.Build();
         }
