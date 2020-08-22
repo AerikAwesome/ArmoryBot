@@ -19,6 +19,7 @@ namespace ArmoryBot.Factories
             var bot = new DiscordBot(TokenType.Bot, token, prefixProvider);
 
             bot.AddModule<PingModule>();
+            bot.AddModule<PlanningModule>();
 
             return bot;
         }
