@@ -5,6 +5,7 @@ WORKDIR /app
 
 FROM mcr.microsoft.com/dotnet/core/sdk:3.1-buster AS build
 WORKDIR /src
+COPY ["ArmoryBot/nuget.config", ""]
 COPY ["ArmoryBot/ArmoryBot.csproj", "ArmoryBot/"]
 RUN dotnet restore "ArmoryBot/ArmoryBot.csproj"
 COPY . .
