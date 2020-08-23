@@ -49,21 +49,27 @@ namespace ArmoryBot.Modules
                 await AddReactions(reply, DateTime.Today.DayOfWeek);
 
             }
+
+            await Context.Message.DeleteAsync();
         }
 
         [Command("add")]
         [Description("Adds one or more items to the last planning entry")]
         public async Task AddAsync([Remainder] string itemString)
         {
-
             if (string.IsNullOrWhiteSpace(itemString))
             {
                 await ReplyAsync("Please provide a comma-separated list of items to add");
                 return;
             }
             var items = itemString.Split(',', StringSplitOptions.RemoveEmptyEntries).Select(i => i.Trim()).ToList();
-            var results = await GetPlanningResults();
-            var day = results.First().DayUserNames.Keys.First();
+
+            var planning = await GetPlanningResults();
+            if (planning.First().Message.CreatedAt < DateTimeOffset.Now.AddDays(-7))
+            {
+                await ReplyAsync("This planning was made more than a week ago, please create a new planning");
+            }
+            var day = planning.First().DayUserNames.Keys.First();
 
 
             foreach (var item in items)
@@ -71,6 +77,8 @@ namespace ArmoryBot.Modules
                 var reply = await ReplyAsync(item);
                 await AddReactions(reply, day);
             }
+
+            await Context.Message.DeleteAsync();
         }
 
         [Command("result")]
@@ -80,6 +88,8 @@ namespace ArmoryBot.Modules
             var planning = await GetPlanningResults();
             var result = BuildResultMessage(planning);
             await ReplyAsync(result);
+            
+            await Context.Message.DeleteAsync();
         }
 
         [Command("today")]
@@ -94,8 +104,10 @@ namespace ArmoryBot.Modules
 
             var result = BuildTodayMessage(planning, DateTimeOffset.Now);
             await ReplyAsync(result);
-        }
 
+            await Context.Message.DeleteAsync();
+        }
+        
         private string BuildResultMessage(List<PlanningResult> results)
         {
             var sb = new StringBuilder("These are the results of the last planning:\n");
