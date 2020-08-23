@@ -46,8 +46,30 @@ namespace ArmoryBot.Modules
             foreach (var item in items)
             {
                 var reply = await ReplyAsync(item);
-                await AddReactions(reply);
+                await AddReactions(reply, DateTime.Today.DayOfWeek);
 
+            }
+        }
+
+        [Command("add")]
+        [Description("Adds one or more items to the last planning entry")]
+        public async Task AddAsync([Remainder] string itemString)
+        {
+
+            if (string.IsNullOrWhiteSpace(itemString))
+            {
+                await ReplyAsync("Please provide a comma-separated list of items to add");
+                return;
+            }
+            var items = itemString.Split(',', StringSplitOptions.RemoveEmptyEntries).Select(i => i.Trim()).ToList();
+            var results = await GetPlanningResults();
+            var day = results.First().DayUserNames.Keys.First();
+
+
+            foreach (var item in items)
+            {
+                var reply = await ReplyAsync(item);
+                await AddReactions(reply, day);
             }
         }
 
@@ -146,11 +168,10 @@ namespace ArmoryBot.Modules
             return users.Where(r => !r.IsBot).Select(r => r.Name).ToList();
         }
 
-        private async Task AddReactions(RestUserMessage reply)
+        private async Task AddReactions(RestUserMessage reply, DayOfWeek startDay)
         {
-            var currentDayOfWeek = DateTime.Today.DayOfWeek;
             var reactions = new List<IEmoji> {YesReaction, NoReaction};
-            reactions.AddRange(GetDayReactions(currentDayOfWeek));
+            reactions.AddRange(GetDayReactions(startDay));
 
             foreach (var reaction in reactions)
             {
