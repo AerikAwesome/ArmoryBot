@@ -15,7 +15,7 @@ namespace ArmoryBot
         {
             Configuration = BuildConfiguration();
 
-            await using var bot = new DiscordBotFactory().CreateBot(Configuration["Discord:BotToken"]);
+            await using var bot = new DiscordBotFactory().CreateBot(Configuration["Discord:BotToken"], Configuration["Discord:BotPrefix"][0]);
             await bot.RunAsync();
         }
 
@@ -31,6 +31,7 @@ namespace ArmoryBot
 
             if (isDevelopment)
             {
+                builder.AddJsonFile("appsettings.Debug.json");
                 builder.AddUserSecrets<Program>();
             }
             builder.AddEnvironmentVariables();
