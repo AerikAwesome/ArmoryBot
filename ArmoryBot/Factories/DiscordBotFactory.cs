@@ -10,10 +10,10 @@ namespace ArmoryBot.Factories
 {
     public class DiscordBotFactory
     {
-        public DiscordBot CreateBot(string token)
+        public DiscordBot CreateBot(string token, char prefix)
         {
             var prefixProvider = new DefaultPrefixProvider()
-                .AddPrefix('*')
+                .AddPrefix(prefix)
                 .AddMentionPrefix();
 
             var bot = new DiscordBot(TokenType.Bot, token, prefixProvider);

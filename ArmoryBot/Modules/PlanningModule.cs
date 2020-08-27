@@ -25,8 +25,9 @@ namespace ArmoryBot.Modules
             {DayOfWeek.Friday, new LocalCustomEmoji(new Snowflake(735837654695936073), "friday")},
             {DayOfWeek.Saturday, new LocalCustomEmoji(new Snowflake(735837655161634866), "saturday")}
         };
-        private static readonly IEmoji YesReaction = new LocalEmoji("✅");
-        private static readonly IEmoji NoReaction = new LocalEmoji("❌");
+        private static readonly IEmoji YesReaction = new LocalCustomEmoji(new Snowflake(748592107270439033), "tickyes");
+        private static readonly IEmoji MaybeReaction = new LocalCustomEmoji(new Snowflake(748596111668936744), "wavemaybe");
+        private static readonly IEmoji NoReaction = new LocalCustomEmoji(new Snowflake(748592107094147124), "crossno");
         private static readonly string planMessagePrefix = "We would like to plan";
         
         [Command("new")]
@@ -42,7 +43,7 @@ namespace ArmoryBot.Modules
             var items = itemString.Split(',', StringSplitOptions.RemoveEmptyEntries).Select(i => i.Trim()).ToList();
 
             await ReplyAsync(
-                $"{planMessagePrefix} {items.Count()} items! Please respond with the appropriate reactions. (Yes/No, and the days on which you are available, starting today)");
+                $"{planMessagePrefix} {items.Count()} items! Please respond with the appropriate reactions. (Yes/Maybe/No, and the days on which you are available, starting today)");
             foreach (var item in items)
             {
                 var reply = await ReplyAsync(item);
@@ -111,11 +112,15 @@ namespace ArmoryBot.Modules
         private string BuildResultMessage(List<PlanningResult> results)
         {
             var sb = new StringBuilder("These are the results of the last planning:\n");
-            foreach (var result in results)
+            foreach (var result in results.Where(r => r.YesUserNames.Any() || r.MaybeUserNames.Any()).OrderBy(r => r.YesUserNames.Count))
             {
                 sb.AppendLine($"**{result.Message.Content}**");
-                sb.AppendLine($"{YesReaction.MessageFormat} Wants to play: {string.Join(", ", result.YesUserNames)}");
-                sb.AppendLine($"{NoReaction.MessageFormat} Does not want to play: {string.Join(", ", result.NoUserNames)}");
+                if (result.YesUserNames.Any())
+                    sb.AppendLine($"{YesReaction.MessageFormat} Wants to play: {string.Join(", ", result.YesUserNames)}");
+                if (result.MaybeUserNames.Any())
+                    sb.AppendLine($"{MaybeReaction.MessageFormat} Maybe wants to play: {string.Join(", ", result.MaybeUserNames)}");
+                if (result.NoUserNames.Any())
+                    sb.AppendLine($"{NoReaction.MessageFormat} Does not want to play: {string.Join(", ", result.NoUserNames)}");
             }
 
             return sb.ToString();
@@ -125,13 +130,11 @@ namespace ArmoryBot.Modules
         {
             var day = date.DayOfWeek;
             var sb = new StringBuilder($"These are the results for today, {DayReactions[day].MessageFormat}:\n");
-            foreach (var result in results)
+            foreach (var result in results.Where(r => r.DayUserNames[day].Any()).OrderBy(r => r.DayUserNames[day].Count))
             {
                 sb.AppendLine($"**{result.Message.Content}**");
                 var names = result.DayUserNames[day];
-                sb.AppendLine(names.Any()
-                    ? $"Wants to play: {string.Join(", ", names)}"
-                    : $"Nobody wants to play this today");
+                sb.AppendLine($"Wants to play: {string.Join(", ", names)}");
             }
 
             return sb.ToString();
@@ -155,12 +158,14 @@ namespace ArmoryBot.Modules
         private async Task<PlanningResult> GetPlanningResult(RestMessage message)
         {
             var yesReactions = await message.GetReactionsAsync(YesReaction);
+            var maybeReactions = await message.GetReactionsAsync(MaybeReaction);
             var noReactions = await message.GetReactionsAsync(NoReaction);
 
             var result = new PlanningResult
             {
                 Message = message,
                 YesUserNames = SelectUserName(yesReactions),
+                MaybeUserNames = SelectUserName(maybeReactions),
                 NoUserNames = SelectUserName(noReactions),
                 DayUserNames = new Dictionary<DayOfWeek, List<string>>()
             };
@@ -182,7 +187,7 @@ namespace ArmoryBot.Modules
 
         private async Task AddReactions(RestUserMessage reply, DayOfWeek startDay)
         {
-            var reactions = new List<IEmoji> {YesReaction, NoReaction};
+            var reactions = new List<IEmoji> {YesReaction, MaybeReaction, NoReaction};
             reactions.AddRange(GetDayReactions(startDay));
 
             foreach (var reaction in reactions)
