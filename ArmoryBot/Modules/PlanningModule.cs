@@ -151,9 +151,12 @@ namespace ArmoryBot.Modules
 
             sb.AppendLine("");
             sb.AppendLine("Most voted items:");
-            foreach (var item in result.Items.Where(i => i.YesUserNames.Count > 0).OrderByDescending(i => i.YesUserNames.Count).Take(3))
+            foreach (var item in result.Items.Where(i => i.YesUserNames.Count > 0).OrderByDescending(i => i.YesUserNames.Count + (i.MaybeUserNames.Count * 0.5)).Take(3))
             {
-                sb.AppendLine($"**{item.Message.Content}** ({string.Join(", ", item.YesUserNames)})");
+                var userString = $"({string.Join(", ", item.YesUserNames)})";
+                if (item.MaybeUserNames.Any())
+                    userString += $" ~ *({string.Join(", ", item.MaybeUserNames)})*";
+                sb.AppendLine($"**{item.Message.Content}** {userString}");
             }
             
             return sb.ToString();
