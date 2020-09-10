@@ -250,7 +250,7 @@ namespace ArmoryBot.Modules
 
             sb.AppendLine("");
             sb.AppendLine("Most voted items:");
-            foreach (var item in result.Items.Where(i => i.YesUserNames.Count > 0).OrderByDescending(i => i.YesUserNames.Count + (i.MaybeUserNames.Count * 0.5)).Take(3))
+            foreach (var item in result.Items.Where(i => i.YesUserNames.Count > 0).OrderByDescending(i => i.YesUserNames.Intersect(result.DayUserNames[day]).Count() + (i.MaybeUserNames.Intersect(result.DayUserNames[day]).Count() * 0.5)).Take(3))
             {
                 var userString = $"({string.Join(", ", item.YesUserNames)})";
                 if (item.MaybeUserNames.Any())
