@@ -50,7 +50,7 @@ namespace ArmoryBot.Models
             var index = 1;
             foreach (var item in Items)
             {
-                sb.AppendLine($"{index}. {item}");
+                sb.AppendLine($"{index}. {item.Trim()}");
                 index++;
             }
 
