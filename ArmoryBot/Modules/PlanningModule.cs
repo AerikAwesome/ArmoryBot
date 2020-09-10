@@ -40,8 +40,23 @@ namespace ArmoryBot.Modules
                 await ReplyAsync("Please provide a comma-separated list of items to plan");
                 return;
             }
-            
-            var items = itemString.Split(',', StringSplitOptions.RemoveEmptyEntries).Select(i => i.Trim()).ToList();
+
+            List<string> items;
+            if (itemString.Equals("preset", StringComparison.InvariantCultureIgnoreCase))
+            {
+                var presetMessage = await GetPresetMessage();
+                if (presetMessage == null)
+                {
+                    await ReplyAsync("Preset does not exist, use \"plan preset add new\" to create a new preset");
+                    return;
+                }
+
+                items = presetMessage.Items;
+            }
+            else
+            {
+                items = itemString.Split(',', StringSplitOptions.RemoveEmptyEntries).Select(i => i.Trim()).ToList();
+            }
 
             var mainMessage = await ReplyAsync($"{planMessagePrefix} {items.Count()} items! Please respond with the appropriate reactions. (Yes/Maybe/No, and the days on which you are available, starting today)");
 
@@ -120,7 +135,90 @@ namespace ArmoryBot.Modules
 
             await Context.Message.DeleteAsync();
         }
-        
+
+        [Command("preset")]
+        [Description("Sets or adds presets for planning")]
+        public async Task PresetAsync(string command, [Remainder] string items)
+        {
+            if (command.Equals("new", StringComparison.InvariantCultureIgnoreCase))
+            {
+                await PresetNew(items);
+            }
+            else if (command.Equals("add", StringComparison.InvariantCultureIgnoreCase))
+            {
+                await PresetAdd(items);
+            }
+            else if (command.Equals("remove", StringComparison.InvariantCultureIgnoreCase))
+            {
+                await PresetRemove(items);
+            }
+            else
+            {
+                await ReplyAsync(
+                    "Invalid command, use \"plan preset new\" to create a new preset message, or \"plan preset add\" to add to an existing one. \"plan preset remove {index}\" can be used to remove items");
+            }
+        }
+
+        private async Task PresetNew(string items)
+        {
+            if (string.IsNullOrWhiteSpace(items))
+            {
+                await ReplyAsync("Please provide a comma-separated list of items to plan");
+                return;
+            }
+            
+            var oldMessage = await GetPresetMessage();
+            if (oldMessage != null)
+            {
+                await oldMessage.Message.UnpinAsync();
+                await oldMessage.Message.DeleteAsync();
+            }
+
+            var newMessage = new PresetMessage(items);
+            newMessage.Message = await ReplyAsync(newMessage.GetMessageContent());
+
+            await newMessage.Message.PinAsync();
+        }
+
+        private async Task PresetAdd(string items)
+        {
+            if (string.IsNullOrWhiteSpace(items))
+            {
+                await ReplyAsync("Please provide a comma-separated list of items to plan");
+                return;
+            }
+
+            var message = await GetPresetMessage();
+            if (message == null)
+            {
+                await ReplyAsync("No existing message found, create a new one using \"plan preset new\"");
+            }
+            
+            message.AddItems(items);
+            await message.Message.ModifyAsync(m => m.Content = message.GetMessageContent());
+        }
+
+        private async Task PresetRemove(string index)
+        {
+            var indexNumber = int.Parse(index);
+
+            var message = await GetPresetMessage();
+            if (message == null)
+            {
+                await ReplyAsync("No existing message found, create a new one using \"plan preset new\"");
+            }
+            message.Items.RemoveAt(indexNumber - 1);
+            await message.Message.ModifyAsync(m => m.Content = message.GetMessageContent());
+        }
+
+        private async Task<PresetMessage> GetPresetMessage()
+        {
+            var messages = await Context.Channel.GetPinnedMessagesAsync();
+            var ownMessages = messages.Where(m => m.Author.Id == Context.Bot.CurrentUser.Id).ToList();
+            var message = ownMessages.FirstOrDefault(m => m.Content.StartsWith(PresetMessage.MessagePrefix));
+            return message == null ? null : new PresetMessage(message);
+        }
+
         private string BuildResultMessage(PlanningResult result)
         {
             var sb = new StringBuilder("These are the results of the last planning:\n");
