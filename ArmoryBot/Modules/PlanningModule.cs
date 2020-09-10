@@ -157,6 +157,7 @@ namespace ArmoryBot.Modules
                 await ReplyAsync(
                     "Invalid command, use \"plan preset new\" to create a new preset message, or \"plan preset add\" to add to an existing one. \"plan preset remove {index}\" can be used to remove items");
             }
+            await Context.Message.DeleteAsync();
         }
 
         private async Task PresetNew(string items)
