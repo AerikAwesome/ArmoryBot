@@ -115,7 +115,11 @@ namespace ArmoryBot.Modules
         {
             var planning = await GetPlanningResult();
             var result = BuildResultMessage(planning);
-            await ReplyAsync(result);
+
+            foreach (var message in result)
+            {
+                await ReplyAsync(message);
+            }
             
             await Context.Message.DeleteAsync();
         }
@@ -220,21 +224,33 @@ namespace ArmoryBot.Modules
             return message == null ? null : new PresetMessage(message);
         }
 
-        private string BuildResultMessage(PlanningResult result)
+        private IEnumerable<string> BuildResultMessage(PlanningResult result)
         {
+            var resultMessages = new List<string>();
             var sb = new StringBuilder("These are the results of the last planning:\n");
             foreach (var resultItem in result.Items.Where(r => r.YesUserNames.Any() || r.MaybeUserNames.Any()).OrderByDescending(r => r.YesUserNames.Count))
             {
-                sb.AppendLine($"**{resultItem.Message.Content}**");
+                var itemStringBuilder = new StringBuilder($"**{resultItem.Message.Content}**\n");
                 if (resultItem.YesUserNames.Any())
-                    sb.AppendLine($"{YesReaction.MessageFormat} Wants to play: {string.Join(", ", resultItem.YesUserNames)}");
+                    itemStringBuilder.AppendLine($"    {YesReaction.MessageFormat} {string.Join(", ", resultItem.YesUserNames)}");
                 if (resultItem.MaybeUserNames.Any())
-                    sb.AppendLine($"{MaybeReaction.MessageFormat} Maybe wants to play: {string.Join(", ", resultItem.MaybeUserNames)}");
-                if (resultItem.NoUserNames.Any())
-                    sb.AppendLine($"{NoReaction.MessageFormat} Does not want to play: {string.Join(", ", resultItem.NoUserNames)}");
-            }
+                    itemStringBuilder.AppendLine($"    {MaybeReaction.MessageFormat} {string.Join(", ", resultItem.MaybeUserNames)}");
+                /*if (resultItem.NoUserNames.Any())
+                    itemStringBuilder.AppendLine($"    {NoReaction.MessageFormat} {string.Join(", ", resultItem.NoUserNames)}");*/
 
-            return sb.ToString();
+                if (sb.Length + itemStringBuilder.Length > 2000)
+                {
+                    resultMessages.Add(" \n" + sb);
+                    sb = itemStringBuilder;
+                }
+                else
+                {
+                    sb.Append(itemStringBuilder);
+                }
+            }
+            resultMessages.Add(sb.ToString());
+
+            return resultMessages;
         }
 
         private string BuildTodayMessage(PlanningResult result, DateTimeOffset date)
